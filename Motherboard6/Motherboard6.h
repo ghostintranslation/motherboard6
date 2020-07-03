@@ -19,7 +19,7 @@ class Motherboard6{
     byte *leds;
     unsigned int *ledsDuration;
     // Buttons
-    byte *buttons;
+    bool *buttons;
     // Potentiometers
     unsigned int *potentiometers;
     // For smoothing purposes
@@ -27,7 +27,7 @@ class Motherboard6{
     byte *potentiometersReadings; 
     // Encoders 
     int *encoders;
-    byte *encodersSwitch;
+    bool *encodersSwitch;
     int *encodersLast;
     byte currentEncPinA;
     byte currentEncPinB;
@@ -59,6 +59,7 @@ class Motherboard6{
     void setMainMuxOnEncoders2();
     void setMainMuxOnChannel();
     void printInputs();
+    void printLeds();
     
   public:
     Motherboard6(byte *inputs);
@@ -67,7 +68,7 @@ class Motherboard6{
     void setDisplay(byte ledIndex, byte ledStatus);
     void resetDisplay();
     int getInput(byte index);
-    int getEncoderSwitch(byte index);
+    bool getEncoderSwitch(byte index);
     int getAnalogMaxValue();
     int getAnalogMinValue();
     byte getMidiChannel();
@@ -83,25 +84,24 @@ inline Motherboard6::Motherboard6(byte *inputs){
 
   this->inputs = new byte[this->ioNumber];
   this->leds = new byte[this->ioNumber];
-  this->buttons = new byte[this->ioNumber];
-  this->potentiometers = new int[this->ioNumber];
-  this->potentiometersTemp = new int[this->ioNumber];
+  this->buttons = new bool[this->ioNumber];
+  this->potentiometers = new unsigned int[this->ioNumber];
+  this->potentiometersTemp = new unsigned int[this->ioNumber];
   this->potentiometersReadings = new byte[this->ioNumber];
-  this->buttons = new byte[this->ioNumber];
   this->encoders = new int[this->ioNumber];
   this->encodersLast = new int[this->ioNumber];
-  this->encodersSwitch = new byte[this->ioNumber];
+  this->encodersSwitch = new bool[this->ioNumber];
 
   for(byte i = 0; i < this->ioNumber; i++){
     this->inputs[i] = inputs[i];
     this->leds[i] = 0;
     this->ledsDuration[i] = 0;
-    this->buttons[i] = 0;
+    this->buttons[i] = true;
     this->potentiometers[i] = 0;
     this->potentiometersTemp[i] = 0;
     this->potentiometersReadings[i] = 0;
     this->encoders[i] = 0;
-    this->encodersSwitch[i] = 0;
+    this->encodersSwitch[i] = true;
     this->encodersLast[i] = HIGH;
   }
 
@@ -131,19 +131,17 @@ inline void Motherboard6::init(){
 
   analogReadResolution(this->analogResolution);
 
-  
   this->readMidiChannel();
   
-  for(byte i = 0; i<this->columnsNumber; i++){
+ // Init sequence
+  for(byte i = 0; i<this->ioNumber; i++){
     this->setDisplay(i, 1);
+    this->iterateDisplay();
+    this->updateDisplay();
+    delay(50);
   }
+  this->resetDisplay();
   this->updateDisplay();
-  delay(1000);
-  for(byte i = 0; i<this->columnsNumber; i++){
-    this->setDisplay(i, 0);
-  }
-  this->updateDisplay();
-
 }
 
 /**
@@ -188,6 +186,7 @@ inline void Motherboard6::update(){
   // Debug
   if (this->clockDebug >= 100) {
     this->printInputs();
+//    this->printLeds();
     this->clockDebug = 0;
   }
 }
@@ -429,7 +428,7 @@ inline void Motherboard6::readPotentiometer(byte inputIndex){
   if(this->potentiometersReadings[inputIndex] == 255){
     this->potentiometers[inputIndex] = this->potentiometersTemp[inputIndex] / 255; 
     this->potentiometers[inputIndex] = map(this->potentiometers[inputIndex], this->getAnalogMinValue(), this->getAnalogMaxValue(), 0, 1023);
-    this->potentiometers[inputIndex] = constrain(this->potentiometers[inputIndex], this->getAnalogMinValue(), this->getAnalogMaxValue());
+    this->potentiometers[inputIndex] = constrain(this->potentiometers[inputIndex], 0, 1023);
     this->potentiometersReadings[inputIndex] = 0;
     this->potentiometersTemp[inputIndex] = 0;
   }
@@ -565,7 +564,9 @@ inline void Motherboard6::setDisplay(byte ledIndex, byte ledStatus){
  */
 inline void Motherboard6::resetDisplay(){
   for(byte i = 0; i < this->ioNumber; i++){
-    this->leds[i] = 0;
+    if(this->leds[i] != 4){
+      this->leds[i] = 0;
+    }
   }
 }
 
@@ -583,7 +584,7 @@ inline int Motherboard6::getInput(byte index){
     break;
     case 1:
       // Button
-      return this->buttons[index];
+      return !this->buttons[index];
     break;
     case 2:
       // Potentiometer
@@ -593,7 +594,7 @@ inline int Motherboard6::getInput(byte index){
       // Encoder
       // Device is not saving the encoders values, only the latest change
       int value = this->encoders[index];
-//      this->encoders[index] = 0; 
+      this->encoders[index] = 0; 
       return value;
     break;
   }
@@ -603,8 +604,8 @@ inline int Motherboard6::getInput(byte index){
  * Get encoder switch value
  * @param byte index The index of the input
  */
-inline int Motherboard6::getEncoderSwitch(byte index){
-  return this->encodersSwitch[index];
+inline bool Motherboard6::getEncoderSwitch(byte index){
+  return !this->encodersSwitch[index];
 }
 
 /**
@@ -661,6 +662,18 @@ inline void Motherboard6::printInputs(){
   Serial.print(this->midiChannel);
   Serial.println("");
   
+  Serial.println("");
+}
+
+/**
+ * Debug print
+ */
+inline void Motherboard6::printLeds(){
+  Serial.println("Leds:");
+  for(byte j = 0; j < this->ioNumber; j++){
+    Serial.print(this->leds[j]);
+    Serial.print(" ");
+  }
   Serial.println("");
 }
 #endif
