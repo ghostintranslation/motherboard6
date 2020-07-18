@@ -23,9 +23,8 @@ MIDI_CREATE_DEFAULT_INSTANCE(); // MIDI library init
 
 #include "Motherboard6.h"
 
-// 0 = empty, 1 = button, 2 = potentiometer, 3 = encoder
-byte controls[6] = {2,2, 2,2, 2,2};
-Motherboard6 device(controls);
+// Motherboard
+Motherboard6 * device = Motherboard6::getInstance();
    
 void setup() {
   Serial.begin(115200);
@@ -34,8 +33,9 @@ void setup() {
 
   // Starting sequence
   Serial.println("Ready!");
-  
-  device.init();
+  // 0 = empty, 1 = button, 2 = potentiometer, 3 = encoder
+  byte controls[6] = {2,2, 2,2, 2,2};
+  device->init(controls);
   
   MIDI.setHandleNoteOn(onNoteOn);
   MIDI.setHandleNoteOff(onNoteOff);
@@ -46,25 +46,22 @@ void setup() {
 }
 
 void loop() {
-  device.update();
+  device->update();
   
   MIDI.read();
   usbMIDI.read();
 }
 
-
-// TODO: The following should be handled by Motherboard9
-
 /**
  * Midi note on callback
  */
 void onNoteOn(byte channel, byte note, byte velocity) {
-  device.setDisplay(0, 1);
+  device->setDisplay(0, 1);
 }
 
 /**
  * Midi note off callback
  */
 void onNoteOff(byte channel, byte note, byte velocity) {
-  device.setDisplay(0, 0);
+  device->setDisplay(0, 0);
 }
