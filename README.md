@@ -46,6 +46,7 @@ Here is the list of components you will need:
 - 14 pins female headers, or longer and can be cut to length
     - DigiKey: https://www.digikey.ca/en/products/detail/sullins-connector-solutions/PPTC141LFBN-RC/810152
     - DigiKey: https://www.digikey.ca/en/products/detail/chip-quik-inc/HDR100IMP40F-G-V-TH/5978200
+- 1x 5 pins female header
 - CD4051 multiplexers (number varies)
     - DigiKey: https://www.digikey.ca/en/products/detail/texas-instruments/CD4051BE/67305
 - DIP16 IC sockets (number varies)
@@ -104,7 +105,7 @@ Motherboard6 * motherboard = Motherboard6::getInstance();
 Then in the `Setup` you have to call Motherboard's `init` with the type of controls you have on the board:
 ```
 // 0 = empty, 1 = button, 2 = potentiometer, 3 = encoder
-byte controls[9] = {2,2, 2,2, 2,2}; // From left to right and top to bottom
+byte controls[6] = {2,2, 2,2, 2,2}; // From left to right and top to bottom
 motherboard->init(controls);
 ```
 
