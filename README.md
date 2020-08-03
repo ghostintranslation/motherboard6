@@ -215,17 +215,12 @@ void setHandleRotaryChange(byte inputIndex, RotaryChangeCallback fptr);
 
 ## Design rules
 
-I made up design rules so that I can create many modules that will reuse the same back boards to lower the cost, and to make it look nice too. 
+Here are the dimensions for any module size. Every column is following the same rules. So the size of a module depends on the number of column. 2 columns = 2x20mm = 40mm, 3 columns = 3x20 = 60mm ...
 
-Some of the rules are:
-
-* 1 column is 4HP width
-* 1 column has up to 3 leds + 3 controls.
-
-TODO: Design rules guide image.
+<img src="design-rules-vector.png" width="200px"/>
 
 ## Known issues
-- Encoders are not yet very reliable
+- Encoders are skipping turns sometimes
 - Maybe test with faster multiplexers
 
 ## Historic 
@@ -239,7 +234,7 @@ TODO: Design rules guide image.
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
 
 # About me
-You can find me on Bandcamp and Instagram:
+You can find me on Bandcamp, Instagram and Youtube, as well as my own website:
 
 https://ghostintranslation.bandcamp.com/
 
