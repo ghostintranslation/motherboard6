@@ -34,7 +34,7 @@ void setup() {
   // Starting sequence
   Serial.println("Ready!");
   // 0 = empty, 1 = button, 2 = potentiometer, 3 = encoder
-  byte controls[6] = {1,1, 1,1, 3,3};
+  byte controls[6] = {1,1, 1,1, 2,3};
   device->init(controls);
   
   MIDI.setHandleNoteOn(onNoteOn);
@@ -50,6 +50,7 @@ void setup() {
   device->setHandlePressDown(4, onRotary4Press);
   device->setHandleLongPressDown(4, onRotary4LongPress);
   device->setHandlePressDown(5, onRotary5Press);
+  device->setHandlePotentiometerChange(4, onPotentiometer5Press);
   device->setHandleRotaryChange(5, onRotary5Change);
 }
 
@@ -78,20 +79,33 @@ void onNoteOff(byte channel, byte note, byte velocity) {
 void onButton1Press(byte inputIndex){
   Serial.println("onButton1Press");
 }
+
 void onButton2Press(byte inputIndex){
   Serial.println("onButton2Press");
 }
+
 void onButton1LongPress(byte inputIndex){
   Serial.println("onButton1LongPress");
 }
+
 void onRotary4Press(byte inputIndex){
   Serial.println("onRotary4Press");
 }
+
 void onRotary4LongPress(byte inputIndex){
   Serial.println("onRotary4LongPress");
 }
+
 void onRotary5Press(byte inputIndex){
   Serial.println("onRotary5Press");
+}
+
+void onPotentiometer5Press(byte inputIndex, unsigned int value, int diffToPrevious){
+  Serial.print("onPotentiometer5Press: ");
+  Serial.print(value);
+  Serial.print(" ");
+  Serial.print(diffToPrevious);
+  Serial.println("");
 }
 
 void onRotary5Change(bool value){
