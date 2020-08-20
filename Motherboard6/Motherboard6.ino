@@ -44,12 +44,12 @@ void setup() {
   usbMIDI.setHandleNoteOn(onNoteOn);
   usbMIDI.setHandleNoteOff(onNoteOff);
   
-  device->setHandlePress(0, onButton1Press);
-  device->setHandleLongPress(0, onButton1LongPress);
-  device->setHandlePress(1, onButton2Press);
-  device->setHandlePress(4, onRotary4Press);
-  device->setHandleLongPress(4, onRotary4LongPress);
-  device->setHandlePress(5, onRotary5Press);
+  device->setHandlePressDown(0, onButton1Press);
+  device->setHandleLongPressDown(0, onButton1LongPress);
+  device->setHandlePressDown(1, onButton2Press);
+  device->setHandlePressDown(4, onRotary4Press);
+  device->setHandleLongPressDown(4, onRotary4LongPress);
+  device->setHandlePressDown(5, onRotary5Press);
   device->setHandleRotaryChange(5, onRotary5Change);
 }
 
@@ -75,22 +75,22 @@ void onNoteOff(byte channel, byte note, byte velocity) {
 }
 
 
-void onButton1Press(){
+void onButton1Press(byte inputIndex){
   Serial.println("onButton1Press");
 }
-void onButton2Press(){
+void onButton2Press(byte inputIndex){
   Serial.println("onButton2Press");
 }
-void onButton1LongPress(){
+void onButton1LongPress(byte inputIndex){
   Serial.println("onButton1LongPress");
 }
-void onRotary4Press(){
+void onRotary4Press(byte inputIndex){
   Serial.println("onRotary4Press");
 }
-void onRotary4LongPress(){
+void onRotary4LongPress(byte inputIndex){
   Serial.println("onRotary4LongPress");
 }
-void onRotary5Press(){
+void onRotary5Press(byte inputIndex){
   Serial.println("onRotary5Press");
 }
 
