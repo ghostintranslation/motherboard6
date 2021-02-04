@@ -3,7 +3,7 @@
 
 /*
  * Motherboard6
- * v1.1.1
+ * v1.2.0
  */
 class Motherboard6{
   
@@ -21,6 +21,7 @@ class Motherboard6{
     
     byte *inputs;
     byte *leds;
+    byte *ledsBrightness;
     unsigned int *ledsDuration;
     // Buttons
     bool *buttons;
@@ -117,10 +118,11 @@ class Motherboard6{
     static Motherboard6 *getInstance();
     void init(byte *inputs);
     void update();
-    void setLED(byte ledIndex, byte ledStatus);
+    void setLED(byte ledIndex, byte ledStatus, byte ledBrightness=255);
     void setAllLED(unsigned int binary, byte ledStatus);  
     void toggleLED(byte index);
     void resetAllLED();
+    void writeLED(byte index);
     int getInput(byte index);
     bool getEncoderSwitch(byte index);
     int getAnalogMaxValue();
@@ -143,10 +145,11 @@ Motherboard6 * Motherboard6::instance = nullptr;
  * Constructor
  */
 inline Motherboard6::Motherboard6(){
-  this->ioNumber = 3*this->columnsNumber;
+  this->ioNumber = 3 * this->columnsNumber;
   
   this->inputs = new byte[this->ioNumber];
   this->leds = new byte[this->ioNumber];
+  this->ledsBrightness = new byte[this->ioNumber];
   this->ledsDuration = new unsigned int[this->ioNumber];
   this->buttons = new bool[this->ioNumber];
   this->potentiometers = new unsigned int[this->ioNumber];
@@ -168,6 +171,7 @@ inline Motherboard6::Motherboard6(){
   for(byte i = 0; i < this->ioNumber; i++){
     this->inputs[i] = 0;
     this->leds[i] = 0;
+    this->ledsBrightness[i] = 255;
     this->ledsDuration[i] = 0;
     this->buttons[i] = true;
     this->potentiometers[i] = 0;
@@ -290,9 +294,9 @@ inline void Motherboard6::update(){
  */
 inline void Motherboard6::setMainMuxOnLeds(){
   pinMode(22, OUTPUT);
-  digitalWrite(2, LOW);
-  digitalWrite(3, LOW);
-  digitalWrite(4, LOW);
+  digitalWriteFast(2, LOW);
+  digitalWriteFast(3, LOW);
+  digitalWriteFast(4, LOW);
 }
 
 /**
@@ -300,9 +304,9 @@ inline void Motherboard6::setMainMuxOnLeds(){
  */
 inline void Motherboard6::setMainMuxOnPots(){
   pinMode(22, INPUT);
-  digitalWrite(2, LOW);
-  digitalWrite(3, HIGH);
-  digitalWrite(4, LOW);
+  digitalWriteFast(2, LOW);
+  digitalWriteFast(3, HIGH);
+  digitalWriteFast(4, LOW);
 }
 
 /**
@@ -310,9 +314,9 @@ inline void Motherboard6::setMainMuxOnPots(){
  */
 inline void Motherboard6::setMainMuxOnEncoders1(){
   pinMode(22, INPUT_PULLUP);
-  digitalWrite(2, LOW);
-  digitalWrite(3, LOW);
-  digitalWrite(4, HIGH);
+  digitalWriteFast(2, LOW);
+  digitalWriteFast(3, LOW);
+  digitalWriteFast(4, HIGH);
 }
 
 /**
@@ -320,9 +324,9 @@ inline void Motherboard6::setMainMuxOnEncoders1(){
  */
 inline void Motherboard6::setMainMuxOnEncoders2(){
   pinMode(22, INPUT_PULLUP);
-  digitalWrite(2, HIGH);
-  digitalWrite(3, LOW);
-  digitalWrite(4, HIGH);
+  digitalWriteFast(2, HIGH);
+  digitalWriteFast(3, LOW);
+  digitalWriteFast(4, HIGH);
 }
 
 /**
@@ -330,9 +334,9 @@ inline void Motherboard6::setMainMuxOnEncoders2(){
  */
 inline void Motherboard6::setMainMuxOnChannel(){
   pinMode(22, INPUT_PULLUP);
-  digitalWrite(2, LOW);
-  digitalWrite(3, HIGH);
-  digitalWrite(4, HIGH);
+  digitalWriteFast(2, LOW);
+  digitalWriteFast(3, HIGH);
+  digitalWriteFast(4, HIGH);
 }
 
 /**
@@ -360,45 +364,55 @@ inline void Motherboard6::updateDisplay(){
   byte r0 = bitRead(this->currentLed, 0);   
   byte r1 = bitRead(this->currentLed, 1);    
   byte r2 = bitRead(this->currentLed, 2);
-  digitalWrite(5, r0);
-  digitalWrite(9, r1);
-  digitalWrite(14, r2);
+  digitalWriteFast(5, r0);
+  digitalWriteFast(9, r1);
+  digitalWriteFast(14, r2);
+    
+  switch(this->leds[this->currentLed]){
+    case 1:
+      // Solid lightw
+      this->writeLED(this->currentLed);
+    break;
+    
+    case 2:
+      // Slow flashing
+      digitalWriteFast(22, HIGH);
+      if (this->clockDisplayFlash % 400 > 200) {
+        this->writeLED(this->currentLed);
+      }
+    break;
+    
+    case 3:
+      // Fast flashing
+      digitalWriteFast(22, HIGH);
+      if (this->clockDisplayFlash % 200 > 100) {
+        this->writeLED(this->currentLed);
+      }
+    break;
 
-    if (this->leds[this->currentLed] == 1) {
-    // Solid light
-    digitalWrite(22, LOW);
-  } else if (this->leds[this->currentLed] == 2) {
-    // Slow flashing
-    digitalWrite(22, HIGH);
-    if (this->clockDisplayFlash % 400 > 200) {
-      digitalWrite(22, LOW);
-    }
-  } else if (this->leds[this->currentLed] == 3) {
-    // Fast flashing
-    digitalWrite(22, HIGH);
-    if (this->clockDisplayFlash % 200 > 100) {
-      digitalWrite(22, LOW);
-    }
+    case 4:
+      // Solid for 50 milliseconds
+      this->writeLED(this->currentLed);
+      if (this->ledsDuration[this->currentLed] == 0) {
+        this->ledsDuration[this->currentLed] = (clockDisplayFlash + 50) % intervalDisplayFlash;
+      }
+  
+      if (this->clockDisplayFlash >= this->ledsDuration[this->currentLed]) {
+        digitalWriteFast(22, HIGH);
+        this->leds[this->currentLed] = 0;
+        this->ledsDuration[this->currentLed] = 0;
+      }
+    break;
 
-  } else if (this->leds[this->currentLed] == 4) {
-    // Solid for 50 milliseconds
-    digitalWrite(22, LOW);
-    if (this->ledsDuration[this->currentLed] == 0) {
-      this->ledsDuration[this->currentLed] = (clockDisplayFlash + 50) % intervalDisplayFlash;
-    }
+    case 5:
+      // Solid low birghtness
+      this->ledsBrightness[this->currentLed] = 128;
+      this->writeLED(this->currentLed);
+    break;
 
-    if (this->clockDisplayFlash >= this->ledsDuration[this->currentLed]) {
-      digitalWrite(22, HIGH);
-      this->leds[this->currentLed] = 0;
-      this->ledsDuration[this->currentLed] = 0;
-    }
-  } else if (this->leds[this->currentLed] == 5) {
-    // Solid low birghtness
-    if (clockDisplayFlash % 20 > 16) {
-      digitalWrite(22, LOW);
-    }
-  } else {
-    digitalWrite(22, HIGH);
+    default:
+      digitalWriteFast(22, HIGH);
+    break;
   }
 }
 
@@ -444,9 +458,9 @@ inline void Motherboard6::readButton(byte inputIndex) {
 
   for (byte i = 0; i < 3; i++) {
     if (i == rowNumber) {
-      digitalWrite(15 + i, LOW);
+      digitalWriteFast(15 + i, LOW);
     } else {
-      digitalWrite(15 + i, HIGH);
+      digitalWriteFast(15 + i, HIGH);
     }
   }
 
@@ -455,15 +469,15 @@ inline void Motherboard6::readButton(byte inputIndex) {
   byte r0 = bitRead(columnNumber, 0);
   byte r1 = bitRead(columnNumber, 1);
   byte r2 = bitRead(columnNumber, 2);
-  digitalWrite(5, r0);
-  digitalWrite(9, r1);
-  digitalWrite(14, r2);
+  digitalWriteFast(5, r0);
+  digitalWriteFast(9, r1);
+  digitalWriteFast(14, r2);
 
   // Giving some time to the Mux and pins to switch
   if (this->clockInputs > this->intervalInputs / 1.5) {
     
     // Reading the new value
-    bool newReading = digitalRead(22);
+    bool newReading = digitalReadFast(22);
 
     // If there is a short or a long press callback on that input
     if(this->inputsPressDownCallback[inputIndex] != nullptr ||
@@ -562,7 +576,6 @@ inline void Motherboard6::readPotentiometer(byte inputIndex){
     this->potentiometersTemp[inputIndex] = 0;
     this->potentiometersPrevious[inputIndex] = this->potentiometers[inputIndex];
   }
-  
 }
 
 /**
@@ -577,9 +590,9 @@ inline void Motherboard6::readEncoder(byte inputIndex) {
   if (this->clockInputs < this->intervalInputs / 10) {
     for (byte i = 0; i < 3; i++) {
       if (i == rowNumber) {
-        digitalWrite(15 + i, LOW);
+        digitalWriteFast(15 + i, LOW);
       } else {
-        digitalWrite(15 + i, HIGH);
+        digitalWriteFast(15 + i, HIGH);
       }
     }
     this->setMainMuxOnEncoders1();
@@ -596,11 +609,11 @@ inline void Motherboard6::readEncoder(byte inputIndex) {
     byte r0 = bitRead(muxPinA, 0);
     byte r1 = bitRead(muxPinA, 1);
     byte r2 = bitRead(muxPinA, 2);
-    digitalWrite(5, r0);
-    digitalWrite(9, r1);
-    digitalWrite(14, r2);
+    digitalWriteFast(5, r0);
+    digitalWriteFast(9, r1);
+    digitalWriteFast(14, r2);
 
-    this->currentEncPinA = digitalRead(22);
+    this->currentEncPinA = digitalReadFast(22);
   }
 
   // Giving time for the multiplexer to switch to Pin B
@@ -609,11 +622,11 @@ inline void Motherboard6::readEncoder(byte inputIndex) {
     int r0 = bitRead(muxPinB, 0);
     int r1 = bitRead(muxPinB, 1);
     int r2 = bitRead(muxPinB, 2);
-    digitalWrite(5, r0);
-    digitalWrite(9, r1);
-    digitalWrite(14, r2);
+    digitalWriteFast(5, r0);
+    digitalWriteFast(9, r1);
+    digitalWriteFast(14, r2);
 
-    this->currentEncPinB = digitalRead(22);
+    this->currentEncPinB = digitalReadFast(22);
   }
 
   // When reading of Pin A and B is done we can interpret the result
@@ -627,14 +640,14 @@ inline void Motherboard6::readEncoder(byte inputIndex) {
     byte result = this->encodersState[inputIndex] & 0x30;
 
     if (result == DIR_CW) {
-//      this->encoders[inputIndex]--;
+      this->encoders[inputIndex]--;
       
       // Calling the decrement callback if there is one
       if(this->inputsRotaryChangeCallback[inputIndex] != nullptr){
         this->inputsRotaryChangeCallback[inputIndex](false);
       }
     } else if (result == DIR_CCW) {
-//      this->encoders[inputIndex]++;
+      this->encoders[inputIndex]++;
       
       // Calling the decrement callback if there is one
       if(this->inputsRotaryChangeCallback[inputIndex] != nullptr){
@@ -647,17 +660,17 @@ inline void Motherboard6::readEncoder(byte inputIndex) {
     byte r0 = bitRead(columnNumber, 0);
     byte r1 = bitRead(columnNumber, 1);
     byte r2 = bitRead(columnNumber, 2);
-    digitalWrite(5, r0);
-    digitalWrite(9, r1);
-    digitalWrite(14, r2);
+    digitalWriteFast(5, r0);
+    digitalWriteFast(9, r1);
+    digitalWriteFast(14, r2);
   }
 
   // Giving time for the multiplexer to switch to Pin B
   if (this->clockInputs > this->intervalInputs / 1.5) {
-//    this->encodersSwitch[inputIndex] = digitalRead(22);
+//    this->encodersSwitch[inputIndex] = digitalReadFast(22);
 
     // Reading the new value
-    bool newReading = digitalRead(22);
+    bool newReading = digitalReadFast(22);
   
     // If there is a short or a long press callback on that input
     if(this->inputsPressDownCallback[inputIndex] != nullptr ||
@@ -722,6 +735,9 @@ inline void Motherboard6::readEncoder(byte inputIndex) {
   }
 }
 
+/**
+ * Read the Midi channel from the dipswitch
+ */
 inline void Motherboard6::readMidiChannel(){
   this->setMainMuxOnChannel();
   delay(50); // Only because this function is used in Init only
@@ -731,9 +747,9 @@ inline void Motherboard6::readMidiChannel(){
     byte r0 = bitRead(i, 0);   
     byte r1 = bitRead(i, 1);    
     byte r2 = bitRead(i, 2);
-    digitalWrite(5, r0);
-    digitalWrite(9, r1);
-    digitalWrite(14, r2);
+    digitalWriteFast(5, r0);
+    digitalWriteFast(9, r1);
+    digitalWriteFast(14, r2);
     delay(5); // Only because this function is used in Init only
     byte channelBit = !digitalRead(22);
     bitWrite(midiChannel, i, channelBit);
@@ -744,8 +760,23 @@ inline void Motherboard6::readMidiChannel(){
 /**
  * Set a led status
  */
-inline void Motherboard6::setLED(byte ledIndex, byte ledStatus){
-  this->leds[ledIndex] = ledStatus;
+inline void Motherboard6::setLED(byte ledIndex, byte ledStatus, byte ledBrightness) {
+  switch(ledStatus){
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+    {
+      this->leds[ledIndex] = ledStatus;
+      this->ledsBrightness[ledIndex] = ledBrightness;
+    }
+    break;
+    default:
+      this->leds[ledIndex] = 0;
+    break;
+  }
 }
 
 
@@ -821,7 +852,7 @@ inline int Motherboard6::getInput(byte index){
  * Get encoder switch value
  * @param byte index The index of the input
  */
-bool Motherboard6::getEncoderSwitch(byte index){
+inline bool Motherboard6::getEncoderSwitch(byte index){
   return !this->encodersSwitch[index];
 }
 
@@ -900,6 +931,17 @@ inline void Motherboard6::setHandleRotaryChange(byte inputIndex, RotaryChangeCal
   // Only for rotaries
   if(this->inputs[inputIndex] == 3){
     this->inputsRotaryChangeCallback[inputIndex] = fptr;
+  }
+}
+
+inline void Motherboard6::writeLED(byte index){
+  if(this->ledsBrightness[index] == 255){
+    digitalWriteFast(22, LOW);
+  }else if(this->ledsBrightness[index] == 0){
+    digitalWriteFast(22, HIGH);
+  }else{
+    byte reversedBrightness = map(this->ledsBrightness[index], 0, 255, 255, 0);
+    analogWrite(22, reversedBrightness); 
   }
 }
 
