@@ -1,24 +1,23 @@
+#include <vector> // This could be replaced with a custom type to reduce the program size
 #include <MIDI.h>
 MIDI_CREATE_DEFAULT_INSTANCE(); // MIDI library init
-
-#ifndef Motherboard6_h
-#define Motherboard6_h
 
 /*
  * Motherboard6
  * v1.3.0
  */
-class Motherboard6{
-  public:
-    struct Input{
-      byte id = 0;
-      byte type = 0;
-      String name = "";
-      byte midiCC = 0;
-      byte midiChannel = 0;
-    };
-    
-  private:
+#ifndef Motherboard6_h
+#define Motherboard6_h
+
+enum InputType {
+  None = 0,
+  Button = 1,
+  Potentiometer = 2,
+  RotaryEncoder = 3
+};
+
+class Motherboard6{    
+  private:    
     static Motherboard6 *instance;
     Motherboard6();
     
@@ -30,7 +29,8 @@ class Motherboard6{
     byte analogResolution = 10;
     byte midiChannel = 0;
     
-    Input *inputs;
+//    Input *inputs;
+    InputType *inputs;
 
     // LEDs
     byte *leds;
@@ -121,11 +121,18 @@ class Motherboard6{
     MidiNoteOnCallback midiNoteOnCallback;
     using MidiNoteOffCallback = void (*)(byte, byte, byte);
     MidiNoteOffCallback midiNoteOffCallback;
-    using MidiControlChangeCallback = void (*)(byte, byte, byte);
-    MidiControlChangeCallback midiControlChangeCallback;
+    using GlobalMidiControlChangeCallback = void (*)(byte, byte, byte);
+    GlobalMidiControlChangeCallback globalMidiControlChangeCallback;
     using MidiSysExCallback = void (*)(const uint8_t*, uint16_t, bool);
     MidiSysExCallback midiSysExCallback;
-    
+    using MidiControlChangeCallbackFunction = void (*)(byte);
+    struct MidiControlChangeCallback{
+      String name = "";
+      byte midiCC = 0;
+      byte midiChannel = 0;
+      MidiControlChangeCallbackFunction callback = nullptr;
+    };
+    std::vector<MidiControlChangeCallback> midiControlChangeCallbacks;
     
     void updateDisplay();
     void iterateDisplay();
@@ -147,7 +154,8 @@ class Motherboard6{
     
   public:
     static Motherboard6 *getInstance();
-    void init(Input *inputs);
+//    void init(Input *inputs);
+    void init(std::initializer_list<InputType> inputs);
     void update();
     void setLED(byte ledIndex, byte ledStatus, byte ledBrightness=255);
     void setAllLED(unsigned int binary, byte ledStatus);  
@@ -171,7 +179,9 @@ class Motherboard6{
     // MIDI Callbacks
     void setHandleMidiNoteOn(MidiNoteOnCallback fptr);
     void setHandleMidiNoteOff(MidiNoteOffCallback fptr);
-    void setHandleMidiControlChange(MidiControlChangeCallback fptr);
+    void setHandleGlobalMidiControlChange(GlobalMidiControlChangeCallback fptr);
+    void setHandleMidiControlChange(byte control, String name, MidiControlChangeCallbackFunction fptr);
+    void setHandleMidiControlChange(byte midiChannel, byte midiCC, String name, MidiControlChangeCallbackFunction fptr);
     void setHandleMidiSysEx(MidiSysExCallback fptr);
 };
 
@@ -184,7 +194,8 @@ Motherboard6 * Motherboard6::instance = nullptr;
 inline Motherboard6::Motherboard6(){
   this->ioNumber = 3 * this->columnsNumber;
   
-  this->inputs = new Input[this->ioNumber];
+//  this->inputs = new Input[this->ioNumber];
+  this->inputs = new InputType[this->ioNumber];
   this->leds = new byte[this->ioNumber];
   this->ledsBrightness = new byte[this->ioNumber];
   this->ledsDuration = new unsigned int[this->ioNumber];
@@ -204,9 +215,10 @@ inline Motherboard6::Motherboard6(){
   this->inputsLongPressDownFired = new bool[this->ioNumber];
   this->inputsPotentiometerChangeCallback = new PotentiometerChangeCallback[this->ioNumber];
   this->inputsRotaryChangeCallback = new RotaryChangeCallback[this->ioNumber];
+//  this->midiControlChangeCallbacks = new MidiControlChangeCallback*[17];
 
   for(byte i = 0; i < this->ioNumber; i++){
-    this->inputs[i] = {id:i, type:0, name:"", midiCC:0};
+    this->inputs[i] = None;
     this->leds[i] = 0;
     this->ledsBrightness[i] = 255;
     this->ledsDuration[i] = 0;
@@ -228,12 +240,22 @@ inline Motherboard6::Motherboard6(){
     this->inputsRotaryChangeCallback[i] = nullptr;
   }
 
+
+//  for (int i = 0; i < 16; ++i) {
+//    this->midiControlChangeCallbacks[i] = new MidiControlChangeCallback[0];
+//  }
+//  for(byte i = 0; i < 16; i++){
+//  for(byte i = 0; i < 16; i++){
+//
+//  }
+//  }
+
 }
 
 /**
  * Singleton instance
  */
-inline Motherboard6 *Motherboard6::getInstance()    {
+inline Motherboard6 *Motherboard6::getInstance() {
   if (!instance)
      instance = new Motherboard6;
   return instance;
@@ -242,10 +264,13 @@ inline Motherboard6 *Motherboard6::getInstance()    {
 /**
  * Init
  */
-inline void Motherboard6::init(Input *inputs){
+inline void Motherboard6::init(std::initializer_list<InputType> inputs) {
+
   // Init of the inputs
-  for(byte i = 0; i < this->ioNumber; i++){
-    this->inputs[i] = inputs[i];
+  byte i = 0;
+  for(auto input : inputs){
+    this->inputs[i] = input;
+    i++;
   }
   
   // Main multiplexer
@@ -283,7 +308,7 @@ inline void Motherboard6::init(Input *inputs){
   MIDI.setHandleNoteOn(this->midiNoteOnCallback);
   MIDI.setHandleNoteOff(this->midiNoteOffCallback);
   MIDI.setHandleControlChange(this->handleMidiControlChange);
-  MIDI.begin(this->getMidiChannel());
+  MIDI.begin();
   usbMIDI.setHandleNoteOn(this->midiNoteOnCallback);
   usbMIDI.setHandleNoteOff(this->midiNoteOffCallback);
   usbMIDI.setHandleSystemExclusive(this->handleMidiSysEx);
@@ -335,8 +360,8 @@ inline void Motherboard6::update(){
   }
 
   
-  MIDI.read(this->getMidiChannel());
-  usbMIDI.read(this->getMidiChannel());
+  MIDI.read();
+  usbMIDI.read();
 }
 
 
@@ -480,7 +505,7 @@ inline void Motherboard6::iterateInputs(){
  * Read value of current inout
  */
 inline void Motherboard6::readCurrentInput(){
-  switch(this->inputs[this->currentInput].type){
+  switch(this->inputs[this->currentInput]){
     default:
     case 0:
       // Silence is golden
@@ -888,7 +913,7 @@ inline void Motherboard6::resetAllLED() {
  * @param byte index The index of the input
  */
 inline int Motherboard6::getInput(byte index){
-  switch(this->inputs[index].type){
+  switch(this->inputs[index]){
     default:
     case 0:
       // Empty
@@ -943,7 +968,7 @@ inline byte Motherboard6::getMidiChannel(){
  */
 inline void Motherboard6::setHandlePressDown(byte inputIndex, PressDownCallback fptr){
   // Press can only happen on a button and an encoder's switch
-  if(this->inputs[inputIndex].type == 1 || this->inputs[inputIndex].type == 3){
+  if(this->inputs[inputIndex] == Button || this->inputs[inputIndex] == RotaryEncoder){
     this->inputsPressDownCallback[inputIndex] = fptr;
   }
 }
@@ -953,7 +978,7 @@ inline void Motherboard6::setHandlePressDown(byte inputIndex, PressDownCallback 
  */
 inline void Motherboard6::setHandlePressUp(byte inputIndex, PressUpCallback fptr){
   // Press can only happen on a button and an encoder's switch
-  if(this->inputs[inputIndex].type == 1 || this->inputs[inputIndex].type == 3){
+  if(this->inputs[inputIndex] == Button || this->inputs[inputIndex] == RotaryEncoder){
     this->inputsPressUpCallback[inputIndex] = fptr;
   }
 }
@@ -963,7 +988,7 @@ inline void Motherboard6::setHandlePressUp(byte inputIndex, PressUpCallback fptr
  */
 inline void Motherboard6::setHandleLongPressDown(byte inputIndex, LongPressDownCallback fptr){
   // Press can only happen on a button and an encoder's switch
-  if(this->inputs[inputIndex].type == 1 || this->inputs[inputIndex].type == 3){
+  if(this->inputs[inputIndex] == Button || this->inputs[inputIndex] == RotaryEncoder){
     this->inputsLongPressDownCallback[inputIndex] = fptr;
   }
 }
@@ -973,7 +998,7 @@ inline void Motherboard6::setHandleLongPressDown(byte inputIndex, LongPressDownC
  */
 inline void Motherboard6::setHandleLongPressUp(byte inputIndex, LongPressUpCallback fptr){
   // Press can only happen on a button and an encoder's switch
-  if(this->inputs[inputIndex].type == 1 || this->inputs[inputIndex].type == 3){
+  if(this->inputs[inputIndex] == Button || this->inputs[inputIndex] == RotaryEncoder){
     this->inputsLongPressUpCallback[inputIndex] = fptr;
   }
 }
@@ -983,7 +1008,7 @@ inline void Motherboard6::setHandleLongPressUp(byte inputIndex, LongPressUpCallb
  */
 inline void Motherboard6::setHandlePotentiometerChange(byte inputIndex, PotentiometerChangeCallback fptr){
   // Only for rotaries
-  if(this->inputs[inputIndex].type == 2){
+  if(this->inputs[inputIndex] == Potentiometer){
     this->inputsPotentiometerChangeCallback[inputIndex] = fptr;
   }
 }
@@ -993,7 +1018,7 @@ inline void Motherboard6::setHandlePotentiometerChange(byte inputIndex, Potentio
  */
 inline void Motherboard6::setHandleRotaryChange(byte inputIndex, RotaryChangeCallback fptr){
   // Only for rotaries
-  if(this->inputs[inputIndex].type == 3){
+  if(this->inputs[inputIndex] == RotaryEncoder){
     this->inputsRotaryChangeCallback[inputIndex] = fptr;
   }
 }
@@ -1026,48 +1051,101 @@ inline void Motherboard6::setHandleMidiNoteOff(MidiNoteOffCallback fptr){
 /**
  * Handle MIDI control change
  */
-inline void Motherboard6::setHandleMidiControlChange(MidiControlChangeCallback fptr){
-  this->midiControlChangeCallback = fptr;
+inline void Motherboard6::setHandleGlobalMidiControlChange(GlobalMidiControlChangeCallback fptr){
+  this->globalMidiControlChangeCallback = fptr;
+}
+
+/**
+ * Handle MIDI control change
+ */
+inline void Motherboard6::setHandleMidiControlChange(byte control, String name, MidiControlChangeCallbackFunction fptr){
+//  for(byte i=0; i<255; i++){
+//    if(this->midiControlChangeCallbacks[0][control] != nullptr){
+//      this->midiControlChangeCallbacks[0][control] = {name: name, callback:fptr};
+//    }
+//  }
+//  
+  this->midiControlChangeCallbacks.push_back({name: name, midiCC: control, midiChannel: 0, callback: fptr});
+}
+
+/**
+ * Handle MIDI control change
+ */
+inline void Motherboard6::setHandleMidiControlChange(byte channel, byte control, String name, MidiControlChangeCallbackFunction fptr){
+//  this->midiControlChangeCallbacks[channel][control] = {name: name, callback:fptr};
+  this->midiControlChangeCallbacks.push_back({name: name, midiCC: control, midiChannel: channel, callback: fptr});
 }
 
 inline void Motherboard6::handleMidiControlChange(byte channel, byte control, byte value){
-  // Check what input the control coreesponds to
-  // Trigger the callback on that input
-
-  // Triggering the input's callbacks
-  for(byte i = 0; i < Motherboard6::getInstance()->ioNumber; i++){
-    // only for the inputs that matches the MIDI CC message
-    if(Motherboard6::getInstance()->inputs[i].midiCC == control && Motherboard6::getInstance()->inputs[i].midiChannel == channel){
-      // and triggering the callback that corresponds to the type of input
-      switch(Motherboard6::getInstance()->inputs[i].type){
-        case 0:
-        default:
-        break;
-
-        case 1:
-        {
-          bool boolValue = value > 63;
-          Motherboard6::getInstance()->triggerPressCallbacks(i, boolValue);
-        }
-        break;
-        
-        case 2:
-          Motherboard6::getInstance()->triggerPotentiometerChangeCallback(i, map(value, 0, 127, 0, 1023), 0); // TODO: See if possible to calculate a diff here
-        break;
-        
-        case 3:
-        {
-          bool boolValue = value > 63;
-          Motherboard6::getInstance()->triggerRotaryChangeCallback(i, boolValue);
-        }
-        break;
+  Serial.println("handleMidiControlChange");
+  Serial.print("Global channel:");
+  Serial.println(Motherboard6::getInstance()->getMidiChannel());
+  Serial.print(" Received channel:");
+  Serial.println(channel);
+  
+  // Internal midi channel is from 1 to 16
+  // Incoming channel is from 1 to 16
+  // Callbacks channel is from 0 to 16, 0 meaning bounded with internal midi channel
+  
+  // If the incoming message's channel corresponds to the board's channel 
+  if(Motherboard6::getInstance()->getMidiChannel() == channel){
+    // Callbacks on internal channel 0 are to be triggered on the board's channel
+    for(MidiControlChangeCallback i : Motherboard6::getInstance()->midiControlChangeCallbacks) {
+      if(i.midiChannel == 0 && i.midiCC == control && i.callback != nullptr){
+        i.callback(value);
       }
     }
     
+//    if(Motherboard6::getInstance()->midiControlChangeCallbacks[0][control].callback != nullptr){
+//      Motherboard6::getInstance()->midiControlChangeCallbacks[0][control].callback(value);
+//    }
   }
 
-  if(Motherboard6::getInstance()->midiControlChangeCallback){
-    Motherboard6::getInstance()->midiControlChangeCallback(channel, control, value);
+  // Trigger any existing callback on the incoming channel and control
+  for(MidiControlChangeCallback i : Motherboard6::getInstance()->midiControlChangeCallbacks) {
+    if(i.midiChannel == channel && i.midiCC == control && i.callback != nullptr){
+      i.callback(value);
+    }
+  }
+//  if(Motherboard6::getInstance()->midiControlChangeCallbacks[channel][control].callback != nullptr){
+//    Motherboard6::getInstance()->midiControlChangeCallbacks[channel][control].callback(value);
+//  }
+  
+
+  // Triggering the input's callbacks
+//  for(byte i = 0; i < Motherboard6::getInstance()->ioNumber; i++){
+//    // only for the inputs that matches the MIDI CC message
+//    if(Motherboard6::getInstance()->inputs[i].midiCC == control && Motherboard6::getInstance()->inputs[i].midiChannel == channel){
+//      // and triggering the callback that corresponds to the type of input
+//      switch(Motherboard6::getInstance()->inputs[i].type){
+//        case 0:
+//        default:
+//        break;
+//
+//        case 1:
+//        {
+//          bool boolValue = value > 63;
+//          Motherboard6::getInstance()->triggerPressCallbacks(i, boolValue);
+//        }
+//        break;
+//        
+//        case 2:
+//          Motherboard6::getInstance()->triggerPotentiometerChangeCallback(i, map(value, 0, 127, 0, 1023), 0); // TODO: See if possible to calculate a diff here
+//        break;
+//        
+//        case 3:
+//        {
+//          bool boolValue = value > 63;
+//          Motherboard6::getInstance()->triggerRotaryChangeCallback(i, boolValue);
+//        }
+//        break;
+//      }
+//    }
+//    
+//  }
+
+  if(Motherboard6::getInstance()->globalMidiControlChangeCallback != nullptr){
+    Motherboard6::getInstance()->globalMidiControlChangeCallback(channel, control, value);
   }
 }
 
@@ -1087,25 +1165,41 @@ inline void Motherboard6::handleMidiSysEx(const uint8_t* data, uint16_t length, 
     case 0:
     {
       String response = "{\"name\":\"synth\",\"midiChannel\":0,\"inputs\":[";
-      for(byte i=0; i<6; i++){
-        
-        response += "{\"id\":\"" + 
-          String(Motherboard6::getInstance()->inputs[i].id) +
-          "\",\"type\":\"" +
-          String(Motherboard6::getInstance()->inputs[i].type) +
-          "\",\"name\":\"" +
-          String(Motherboard6::getInstance()->inputs[i].name) +
-          "\",\"midiCC\":\"" +
-          String(Motherboard6::getInstance()->inputs[i].midiCC) +
-          "\",\"midiChannel\":\"" +
-          String(Motherboard6::getInstance()->inputs[i].midiChannel) +
-          "\"}";
-          
-          if(i<5){
-            response += ',';
-          }
+      bool hasAtLeastOneEntry = false;
+      for(MidiControlChangeCallback i : Motherboard6::getInstance()->midiControlChangeCallbacks) {
+        if(i.callback != nullptr){
+          response += "{\"name\":\"" + 
+              i.name +
+              "\",\"midiCC\":\"" +
+              String(i.midiCC) +
+              "\",\"midiChannel\":\"" +
+              String(i.midiChannel) +
+              "\"},";
+            hasAtLeastOneEntry = true;
+        }
       }
+//      for(byte channel=0; channel<17; channel++){
+//        for(byte control=0; control<127; control++){
+//          if(Motherboard6::getInstance()->midiControlChangeCallbacks[channel][control].callback != nullptr){
+//            response += "{\"name\":\"" + 
+//              Motherboard6::getInstance()->midiControlChangeCallbacks[channel][control].name +
+//              "\",\"midiCC\":\"" +
+//              String(control) +
+//              "\",\"midiChannel\":\"" +
+//              String(channel) +
+//              "\"},";
+//            hasAtLeastOneEntry = true;
+//          }
+//        }
+//      }
+      
+      if(hasAtLeastOneEntry){
+        // Removing last comma
+        response.remove(response.length()-1,1);
+      }
+      
       response += "]}";
+
       byte byteResponse[response.length()];
       response.getBytes(byteResponse, response.length()+1);
       byte byteTypedResponse[sizeof(byteResponse)+1];
@@ -1120,11 +1214,11 @@ inline void Motherboard6::handleMidiSysEx(const uint8_t* data, uint16_t length, 
     // Device config import
     case 1:
     {
-      Serial.print(data[2]); // Input Id
+      Serial.print(data[2]); // Callback name
       Serial.print(" ");
-      Serial.print(data[3]); // Input midiCC
+      Serial.print(data[2]); // Callback midiCC
       Serial.print(" ");
-      Serial.println(data[4]); // Input midiChannel
+      Serial.println(data[3]); // Callback midiChannel
       
       // Sending confirmation
       byte byteMessage[2] = {1,1};
