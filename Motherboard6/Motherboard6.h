@@ -1214,11 +1214,30 @@ inline void Motherboard6::handleMidiSysEx(const uint8_t* data, uint16_t length, 
     // Device config import
     case 1:
     {
-      Serial.print(data[2]); // Callback name
-      Serial.print(" ");
-      Serial.print(data[2]); // Callback midiCC
-      Serial.print(" ");
-      Serial.println(data[3]); // Callback midiChannel
+      // The response format is:
+      // 1 [Callback_Name_Variable_Length] [midiCC] [midiChannel]
+      // 
+      // Since the name's length is variable, and there is no delimiting character surrounding it,
+      // one way of finding out if this message is for that callback is to search for known names in the message
+      
+      // Converts the response into string
+      String dataString = String((char *)data);
+
+      // Loop through all known callbacks and search each callback's name in the response
+      // If the name is found then the message is meant for that callback
+      for(MidiControlChangeCallback& c: Motherboard6::getInstance()->midiControlChangeCallbacks) {
+        if(c.callback != nullptr){
+          int indexOfCallbackName = dataString.lastIndexOf(c.name, 4);
+          if(indexOfCallbackName > -1){
+            // This callback's name was found in the response
+            c.midiCC = data[2 + c.name.length()];
+            c.midiChannel = data[2 + c.name.length() + 1];
+          }
+        }
+      }
+
+      // TODO : Now save the data
+      // Motherboard6::getInstance()->saveConfig();
       
       // Sending confirmation
       byte byteMessage[2] = {1,1};
