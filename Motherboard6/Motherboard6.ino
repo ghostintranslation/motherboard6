@@ -22,45 +22,34 @@ https://github.com/ghostintranslation
 
 // Motherboard
 Motherboard6 * device = Motherboard6::getInstance();
-
-   
-  // 0 = empty, 1 = button, 2 = potentiometer, 3 = encoder
-//  Motherboard6::Input controls[6] = {
-//    {id:0, type:1, name:"Mode",   midiCC:0, midiChannel:1}, {id:1, type:1, name:"Param",   midiCC:1, midiChannel:1}, // TODO: midiChannel should be a int, -1 would mean follow the main setting
-//    {id:2, type:2, name:"Shape",  midiCC:2, midiChannel:1}, {id:3, type:0, name:"FM",      midiCC:3, midiChannel:1},
-//    {id:4, type:0, name:"Attack", midiCC:4, midiChannel:1}, {id:5, type:0, name:"Release", midiCC:5, midiChannel:1}
-//  };
-
-//  InputType controls[6] = {
-//    Potentiometer, Potentiometer,
-//    Potentiometer, Potentiometer,
-//    Potentiometer, Potentiometer
-//  };
   
 void setup() {
   Serial.begin(115200);
   
   while (!Serial && millis() < 2500); // wait for serial monitor
 
-  // Starting sequence
-  Serial.println("Ready!");
-  device->init({
-    Potentiometer, Potentiometer,
-    Potentiometer, Potentiometer,
-    Potentiometer, Potentiometer
-  });
+  Serial.println("000");
+  // Init
+  device->init(
+    "Synth",
+    {
+      Potentiometer, Potentiometer,
+      Potentiometer, Potentiometer,
+      Potentiometer, Potentiometer
+    }
+  );
   Serial.println("Ready!");
   
   device->setHandleMidiNoteOn(onNoteOn);
   device->setHandleMidiNoteOff(onNoteOff);
 //  device->setHandleMidiControlChange(onControlChange);// TODO: Make it specific to input ids
-  device->setHandleMidiControlChange(2, 0, "Mode",   onControlChangeMode);
-  device->setHandleMidiControlChange(1, "Param",  onControlChangeParam);
-  device->setHandleMidiControlChange(2, "Shape",  onControlChangeShape);
-  device->setHandleMidiControlChange(3, "FM",     onControlChangeFM);
-  device->setHandleMidiControlChange(4, "Attack", onControlChangeAttack);
-  device->setHandleMidiControlChange(5, "Release",onControlChangeRelease);
-  device->setHandleMidiControlChange(55, "Custom",onControlChangeCustom);
+  device->setHandleMidiControlChange(2, 0,  "Mode",   onControlChangeMode);
+  device->setHandleMidiControlChange(1,     "Param",  onControlChangeParam);
+  device->setHandleMidiControlChange(2,     "Shape",  onControlChangeShape);
+  device->setHandleMidiControlChange(3,     "FM",     onControlChangeFM);
+  device->setHandleMidiControlChange(4,     "Attack", onControlChangeAttack);
+  device->setHandleMidiControlChange(5,     "Release",onControlChangeRelease);
+  device->setHandleMidiControlChange(55,    "Custom", onControlChangeCustom);
   
   device->setHandlePressDown(0, onButton1Press);
   device->setHandlePressUp(0, onButton1Release);
