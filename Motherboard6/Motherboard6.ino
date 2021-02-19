@@ -28,7 +28,6 @@ void setup() {
   
   while (!Serial && millis() < 2500); // wait for serial monitor
 
-  Serial.println("000");
   // Init
   device->init(
     "Synth",
@@ -43,7 +42,7 @@ void setup() {
   device->setHandleMidiNoteOn(onNoteOn);
   device->setHandleMidiNoteOff(onNoteOff);
 //  device->setHandleMidiControlChange(onControlChange);// TODO: Make it specific to input ids
-  device->setHandleMidiControlChange(2, 0,  "Mode",   onControlChangeMode);
+  device->setHandleMidiControlChange(2, 2,  "Mode",   onControlChangeMode);
   device->setHandleMidiControlChange(1,     "Param",  onControlChangeParam);
   device->setHandleMidiControlChange(2,     "Shape",  onControlChangeShape);
   device->setHandleMidiControlChange(3,     "FM",     onControlChangeFM);

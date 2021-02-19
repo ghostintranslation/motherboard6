@@ -56,8 +56,8 @@ class Motherboard6{
           MidiControlChangeCallback *c = Motherboard6::getInstance()->getMidiControlChangeCallback(mc.controlName);
           if(c != nullptr && c->callback != nullptr){
             conf.midiControlsArray[i] = mc;
+            i++;
           }
-          i++;
         }
         
         // Clear the memory
@@ -75,7 +75,7 @@ class Motherboard6{
           midiChannel: 0,
           {}
         };
-
+        
         EEPROM.get( 0, conf);
         delay(10);
         
@@ -87,7 +87,7 @@ class Motherboard6{
              conf.midiControlsArray[i].midiChannel != 255){
             this->midiControls.push_back(conf.midiControlsArray[i]);
           }
-        }
+        }  
       }
 
       String toJSON(){
@@ -264,6 +264,7 @@ class Motherboard6{
     void toggleLED(byte index);
     void resetAllLED();
     void writeLED(byte index);
+    void initSequence();
     int getInput(byte index);
     bool getEncoderSwitch(byte index);
     int getAnalogMaxValue();
@@ -362,10 +363,8 @@ inline void Motherboard6::init(String deviceName, std::initializer_list<InputTyp
   }
 
   // Config init
-  Serial.println("111");
   this->config.deviceName = deviceName;
   this->config.load();
-  Serial.println("222");
   
   // Main multiplexer
   pinMode(2, OUTPUT);
@@ -389,14 +388,7 @@ inline void Motherboard6::init(String deviceName, std::initializer_list<InputTyp
   this->readMidiChannel();
   
   // Init sequence
-  for(byte i = 0; i<this->ioNumber; i++){
-    this->setLED(i, 1);
-    this->iterateDisplay();
-    this->updateDisplay();
-    delay(50);
-  }
-  this->resetAllLED();
-  this->updateDisplay();
+  this->initSequence();
 
   // MIDI init
   MIDI.setHandleNoteOn(this->midiNoteOnCallback);
@@ -1157,7 +1149,7 @@ inline void Motherboard6::setHandleMidiControlChange(byte control, String contro
 }
 
 /**
- * Handle MIDI control change
+ * Set a callback to a MIDI control change message
  */
 inline void Motherboard6::setHandleMidiControlChange(byte channel, byte control, String controlName, MidiControlChangeCallbackFunction fptr){
   // Init the midi control with what is set in the code
@@ -1170,34 +1162,35 @@ inline void Motherboard6::setHandleMidiControlChange(byte channel, byte control,
   controlName.toCharArray(midiControl.controlName, 20);
   
   // Check if something is defined in the config for that callback
+  bool midiControlFromConfig = false;
   for(MidiControl c : Motherboard6::getInstance()->config.midiControls) {
     char controlNameCharArray[20];
     controlName.toCharArray(controlNameCharArray, 20);
-//    if(c.controlName == controlName){
+
     if(strcmp(c.controlName, controlNameCharArray) == 0){
       // This callback exists in the config so we'll use it instead
       midiControl = c;
+      midiControlFromConfig = true;
       break;
     }
   }
 
+  // Only if the MidiControl is not yet in the config we add it
+  // The MidiControl would be in the config if it was loaded from memory on the Init
+  if(!midiControlFromConfig){
+    this->config.midiControls.push_back(midiControl);
+  }
   // Add the callback to the list
-  this->config.midiControls.push_back(midiControl);
   this->midiControlChangeCallbacks.push_back({
     controlName: controlName,
     callback: fptr
   });
-
-  Serial.println(this->config.toJSON());
 }
 
-inline void Motherboard6::handleMidiControlChange(byte channel, byte control, byte value){
-  Serial.println("handleMidiControlChange");
-  Serial.print("Global channel:");
-  Serial.println(Motherboard6::getInstance()->getMidiChannel());
-  Serial.print(" Received channel:");
-  Serial.println(channel);
-  
+/**
+ * Handle received MIDI Control Change message
+ */
+inline void Motherboard6::handleMidiControlChange(byte channel, byte control, byte value){  
   // Internal midi channel is from 1 to 16
   // Incoming channel is from 1 to 16
   // Callbacks channel is from 0 to 16, 0 meaning bounded with internal midi channel
@@ -1238,35 +1231,17 @@ inline void Motherboard6::setHandleMidiSysEx(MidiSysExCallback fptr){
   this->midiSysExCallback = fptr;
 }
 
+/**
+ * Handle MIDI SysEx message
+ */
 inline void Motherboard6::handleMidiSysEx(const uint8_t* data, uint16_t length, bool last){
   switch(data[1]){
     // Device config request
     // Sending reply in a JSON string
     case 0:
     {
-      // TODO use the same toSJON function
-      String response = "{\"name\":\"synth\",\"midiChannel\":0,\"inputs\":[";
-      bool hasAtLeastOneEntry = false;
-      for(MidiControl mc : Motherboard6::getInstance()->config.midiControls) {
-        MidiControlChangeCallback *c = Motherboard6::getInstance()->getMidiControlChangeCallback(mc.controlName);
-        if(c != nullptr && c->callback != nullptr){
-          response += "{\"name\":\"" + 
-              String(mc.controlName) +
-              "\",\"midiCC\":\"" +
-              String(mc.midiCC) +
-              "\",\"midiChannel\":\"" +
-              String(mc.midiChannel) +
-              "\"},";
-            hasAtLeastOneEntry = true;
-        }
-      }
-      
-      if(hasAtLeastOneEntry){
-        // Removing last comma
-        response.remove(response.length()-1,1);
-      }
-      
-      response += "]}";
+      String response = Motherboard6::getInstance()->config.toJSON();
+//      Serial.println(response);
 
       byte byteResponse[response.length()];
       response.getBytes(byteResponse, response.length()+1);
@@ -1287,6 +1262,8 @@ inline void Motherboard6::handleMidiSysEx(const uint8_t* data, uint16_t length, 
       // 
       // Since the name's length is variable, and there is no delimiting character surrounding it,
       // one way of finding out if this message is for that callback is to search for known names in the message
+
+      bool somethingToSave = false;
       
       // Converts the response into string
       String dataString = String((char *)data);
@@ -1299,39 +1276,51 @@ inline void Motherboard6::handleMidiSysEx(const uint8_t* data, uint16_t length, 
           int indexOfCallbackName = dataString.lastIndexOf(mc.controlName, 4);
           if(indexOfCallbackName > -1){
             // This callback's name was found in the response
-            mc.midiCC = data[2 + String(mc.controlName).length()];
-            mc.midiChannel = data[2 + String(mc.controlName).length() + 1];
+
+            if(mc.midiCC != data[2 + String(mc.controlName).length()] ||
+               mc.midiChannel != data[2 + String(mc.controlName).length() + 1]){
+                // Save only if there is actually a change
+                somethingToSave = true;
+                
+                mc.midiCC = data[2 + String(mc.controlName).length()];
+                mc.midiChannel = data[2 + String(mc.controlName).length() + 1];
+               }
+            break;
           }
         }
       }
 
       // Saving the config
-      Motherboard6::getInstance()->config.save();
+      if(somethingToSave){
+        Motherboard6::getInstance()->config.save();
       
-      // Sending confirmation
-      byte byteMessage[2] = {1,1};
-      usbMIDI.sendSysEx(2, byteMessage, false);
+        // Sending OK
+        byte byteMessage[2] = {1,1};
+        usbMIDI.sendSysEx(2, byteMessage, false);
+
+        Motherboard6::getInstance()->initSequence();
+      }else{
+        // Sending KO
+        byte byteMessage[2] = {1,0};
+        usbMIDI.sendSysEx(2, byteMessage, false);
+      }
     }
     break;
     
     default:
     break;
   }
-  
-  for(int i=0; i<length; i++){
-    Serial.print(data[i]);
-    Serial.print(" ");
-  }
-  Serial.println("");
-  Serial.print("Last: ");
-  Serial.println(last);
-  Serial.println("");
 
   if(Motherboard6::getInstance()->midiSysExCallback){
     Motherboard6::getInstance()->midiSysExCallback(data, length, last);
   }
 }
 
+/**
+ * Get MIDI Control Change Callback
+ * @param (String) name The name of the callback function
+ * @return (MidiControlChangeCallback) The callback function
+ */
 inline Motherboard6::MidiControlChangeCallback *Motherboard6::getMidiControlChangeCallback(String name){
   for(MidiControlChangeCallback &c : Motherboard6::getInstance()->midiControlChangeCallbacks) {
     if(c.controlName == name){
@@ -1340,6 +1329,21 @@ inline Motherboard6::MidiControlChangeCallback *Motherboard6::getMidiControlChan
   }
 
   return nullptr;
+}
+
+/**
+ * LEDs init sequence
+ */
+inline void Motherboard6::initSequence(){
+  // Init sequence
+  for(byte i = 0; i<this->ioNumber; i++){
+    this->setLED(i, 1);
+    this->iterateDisplay();
+    this->updateDisplay();
+    delay(50);
+  }
+  this->resetAllLED();
+  this->updateDisplay();
 }
 
 /**
