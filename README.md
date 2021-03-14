@@ -4,7 +4,9 @@
 
 MOTHERBOARD6 is a 6 controls Teensy 4.0 + audio board platform.
 
-MOTHERBOARD6, MOTHERBOARD9 and MOTHERBOARD12 allows for any combination of pushbuttons, potentiometers and encoders, in addition to leds. The footprints of those 3 type of components are stacked together so that only one pcb can be used for many different modules.
+MOTHERBOARD6, MOTHERBOARD9 and MOTHERBOARD12 allows for any combination of pushbuttons, potentiometers, encoders and CherryMX in addition to leds. The footprints of those 3 type of components are stacked together so that only one pcb can be used for many different modules.
+
+<img src="input-traces.png" width="200px"/>
 
 The MOTHERBOARDs come with 2 boards, one on which the inputs and leds are soldered to (A), and one on which the Teensy and other components are soldered to (B). Both boards are attached together by multiple pin headers.
 
@@ -82,19 +84,18 @@ And here is the list of optional components according to your wants:
 
 ## Teensy
 
-In order to run any sketch on the Teensy you have to install the Teensyduino add-on to Arduino.
+In order to run any sketch on the Teensy you have to install Arduino and the Teensyduino add-on.
 Follow the instructions from the official page:
 https://www.pjrc.com/teensy/teensyduino.html
 
-Then open the sketch located in the Motherboard6 folder of this repo.
-
-In the Tools -> USB Type menu, choose "Serial + midi".
-
-Then you are ready to compile and upload the sketch.
+1. Then open `Synth.ino` located in the `Synth` folder of this repo.
+2. In the Tools -> USB Type menu, choose `Serial + midi`.
+3. Plug the Teensy to your computer with a micro USB cable. (It's ok if the Teensy is on the module)
+4. Then just click the arrow button to upload the code
 
 ## MIDI
 
-The MIDI input and output jacks are directly connected to the Teensy serial input and output. That means there is not protection against voltage or current. It is primarily ment to connect 2 of these modules, or 2 Teensy together. If you want to connect something else to it make sure to provide a maximum of 3.3v and 250 mA.
+The MIDI input and output jacks are directly connected to the Teensy serial input and output. That means there is no protection against voltage or current. It is primarily ment to connect 2 of these modules, or 2 Teensy together. If you want to connect something else to it make sure to provide a maximum of `3.3v` and `250mA`.
 
 ## How to code
 
@@ -107,14 +108,14 @@ Motherboard6 is a singleton, so to instanciate it you do this:
 Motherboard6 * motherboard = Motherboard6::getInstance();
 ```
 
-Then in the `Setup` you have to call Motherboard's `init` with the type of controls you have on the board:
+Then in the `Setup` you have to call the Motherboard's `init` with the type of controls you have on the board:
 ```
 // 0 = empty, 1 = button, 2 = potentiometer, 3 = encoder
 byte controls[6] = {2,2, 2,2, 2,2}; // From left to right and top to bottom
 motherboard->init(controls);
 ```
 
-Then in the `loop` you have to call Motherboards `update`:
+Then in the `loop` you have to call the Motherboard's `update`:
 ```
 motherboard->update();
 ```
@@ -227,12 +228,6 @@ Here are the dimensions for any module size. Every column is following the same 
 ## Known issues
 - Encoders are skipping turns sometimes
 - Maybe test with faster multiplexers
-
-## Historic 
-
-- Rev 3 (current) using more multiplexers because of the limited available pins.
-- Rev 2 added multiplexers, but wasn't taking in account the forbidden pins from the use of the audio board.
-- Rev 1 was using matrices for potentiometers, which doesn't work.
 
 ## License
 
