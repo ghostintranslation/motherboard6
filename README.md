@@ -12,7 +12,7 @@ What makes it interesting is how the inputs are stacked to allow for any combina
 
 <img src="input-traces.png" width="200px"/>
 
-It is hybrid because the physical format is following Eurorack standard, but it doesn't use CV/Gates and patch cables and has rather midi and audio jacks in the back. They are oriented for live performance more than experimentation.
+MOTHERBOARD's the physical format is following Eurorack standard, but it doesn't use CV/Gates and patch cables and has rather midi and audio jacks in the back. It is oriented for live performance more than experimentation.
 
 A MOTHERBOARD come with 2 boards, one on which the inputs and leds are soldered to (A), and one on which the Teensy and other components are soldered to (B). Both boards are attached together by multiple pin headers.
 
@@ -45,48 +45,34 @@ A few examples:
 
 If you only use potentiometers, you won't need IC3 and IC4. Or if you don't have any led you won't need IC2. Or if you don't want to use a dipswitch to select the midi channel, you won't need IC6.
 
-## Components
+## Bill Of Materials
 
 Here is the list of components you will need:
-- MOTHERBOARD6A pcb
-- MOTHERBOARD6B pcb
-- Teensy 4.0
-    - PJRC: https://www.pjrc.com/store/teensy40.html
-    - DigiKey: https://www.digikey.ca/en/products/detail/sparkfun-electronics/DEV-15583/10384551
-- 14 pins male headers, or longer and can be cut to length
-    - DigiKey: https://www.digikey.ca/en/products/detail/adam-tech/PH1-14-UA/9830506
-    - DigiKey: https://www.digikey.ca/en/products/detail/PREC040SAAN-RC/S1012EC-40-ND/2774814
-- 14 pins female headers, or longer and can be cut to length
-    - DigiKey: https://www.digikey.ca/en/products/detail/sullins-connector-solutions/PPTC141LFBN-RC/810152
-    - DigiKey: https://www.digikey.ca/en/products/detail/chip-quik-inc/HDR100IMP40F-G-V-TH/5978200
-- 1x 5 pins female header
-- CD4051 multiplexers (number varies)
-    - DigiKey: https://www.digikey.ca/en/products/detail/texas-instruments/CD4051BE/67305
-- DIP16 IC sockets (number varies)
-    - DigiKey: https://www.digikey.ca/en/products/detail/adam-tech/ICS-316-T/9832862
-- 3.5mm jack connectors
-    - Thonk: https://www.thonk.co.uk/shop/3-5mm-jacks/ (the Thonkiconn)
-- 4 positions dipswitch
-    - DigiKey: https://www.digikey.ca/product-detail/en/cts-electrocomponents/210-4MS/CT2104MS-ND/2503781
 
-And here is the list of optional components according to your wants:
+```
+1 MOTHERBOARD6A pcb
+1 MOTHERBOARD6B pcb
+1 Teensy 4.0
+1 Teensy audio board (optional)
+1 5 pins male header
+5 14 pins male header
+5 14 pins female header
+2 14 pins long female header (see note)
+2 3.5mm jack connectors
+1 resistor ~ 22ohm
+1 4 positions dipswitch (optional)
+x CD4051 multiplexers
+x DIP16 IC sockets (optional)
+x LEDs
+x vertical linear 10k potentiometers
+x vertical rotary encoders
+x D6 pushbuttons
+x CherryMX keys
+```
 
-- Teensy audio board
-    - PJRC: https://www.pjrc.com/store/teensy3_audio.html
-- Vertical linear 10k potentiometers
-    - Modular Addict: https://modularaddict.com/parts/potentiometers-1/9mm-t18-vertical-potentiometers
-    - Synthrotek: https://store.synthrotek.com/9mm-Vertical-Potentiometers_p_649.html
-    - Thonk: https://www.thonk.co.uk/shop/alpha-9mm-pots-vertical-t18/
-    - DigiKey: https://www.digikey.ca/en/products/detail/tt-electronics-bi/P0915N-FC15BR10K/4780740
-- D6 pushbuttons
-    - Thonk: https://www.thonk.co.uk/shop/radio-music-switch/
-    - DigiKey: https://www.digikey.ca/en/products/detail/c-k/D6R00-F1-LFS/1466329
-- Rotary encoders
-    - DigiKey: https://www.digikey.ca/en/products/detail/bourns-inc/PEC11R-4115K-S0018/4699207
-- 1 resistor ~ 22ohm
-- LEDs
-    - Thonk: https://www.thonk.co.uk/shop/new-style-flat-top-leds-turing-pulses-vactrol-mix/
-    - DigiKey: https://www.digikey.ca/en/products/detail/WP424SRDT/754-1717-ND/3084140
+Note: long female headers are used to stack the audio board to Teensy and connect Teensy to the MOTHERBOARD
+
+Here is a list of useful links to get these parts: https://github.com/ghostintranslation/parts
 
 ## Teensy
 
