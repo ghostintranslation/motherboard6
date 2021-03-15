@@ -2,13 +2,19 @@
 
 ![GitHub version](https://img.shields.io/github/v/release/ghostintranslation/motherboard6.svg?include_prereleases)
 
-MOTHERBOARD6 is a 6 controls Teensy 4.0 + audio board platform.
+## MOdular Teensy Hybrid Eurorack Board
 
-MOTHERBOARD6, MOTHERBOARD9 and MOTHERBOARD12 allows for any combination of pushbuttons, potentiometers, encoders and CherryMX in addition to leds. The footprints of those 3 type of components are stacked together so that only one pcb can be used for many different modules.
+MOTHERBOARD6 is a 6 controls Teensy 4.0 + audio board platform. It is part of a familly of 3 variations of the same platform, MOTHERBOARD6, MOTHERBOARD9 and MOTHERBOARD12.
+
+The MOTHERBOARDs follow a column design of 3 inputs per column and 2, 3 or 4 columns for a total of 6, 9 or 12 inputs and as many LEDs. 
+
+What makes it interesting is how the inputs are stacked to allow for any combination of pushbuttons, potentiometers, encoders and CherryMX. The footprints of those 4 type of inputs are stacked together so that each spot can be any of them, and only one pcb can be used for many different modules. It is a modular platform.
 
 <img src="input-traces.png" width="200px"/>
 
-The MOTHERBOARDs come with 2 boards, one on which the inputs and leds are soldered to (A), and one on which the Teensy and other components are soldered to (B). Both boards are attached together by multiple pin headers.
+It is hybrid because the physical format is following Eurorack standard, but it doesn't use CV/Gates and patch cables and has rather midi and audio jacks in the back. They are oriented for live performance more than experimentation.
+
+A MOTHERBOARD come with 2 boards, one on which the inputs and leds are soldered to (A), and one on which the Teensy and other components are soldered to (B). Both boards are attached together by multiple pin headers.
 
 I sell the PCBs if you wish to build it. You can get them here: https://ghostintranslation.bandcamp.com/merch/motherboard6-pcb-3
 
