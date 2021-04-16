@@ -1,3 +1,6 @@
+#ifndef Motherboard6_h
+#define Motherboard6_h
+
 #include <vector> // This could be replaced with a custom type to reduce the program size
 #include <EEPROM.h>
 #include <MIDI.h>
@@ -5,11 +8,9 @@ MIDI_CREATE_DEFAULT_INSTANCE(); // MIDI library init
 
 /*
  * Motherboard6
- * v1.3.0
+ * v1.3.1
  */
-#ifndef Motherboard6_h
-#define Motherboard6_h
-
+ 
 enum InputType {
   None = 0,
   Button = 1,
@@ -33,21 +34,25 @@ class Motherboard6{
       // The serializable version of the config
       // Basically a duplicate but with a fixed size array instead of a vector or pointer array
       struct SerializableConfig {
+        char deviceName[20] = "";
         byte midiChannel = 0;
         MidiControl midiControlsArray[midiControlsListSize] = {};
       };
       
-      String deviceName = "Motherboard6";
+      char deviceName[20] = "Motherboard6";
       byte midiChannel = 0;
       std::vector<MidiControl> midiControls = {};
       
       void save(){
+        Serial.println("Saving config");
         SerializableConfig conf = {
+          deviceName: {},
           midiChannel: 0,
           {}
         };
 
         // Set the Midi channel
+        strcpy(conf.deviceName, this->deviceName);
         conf.midiChannel = this->midiChannel;
 
         // Set the Midi controls
@@ -72,13 +77,24 @@ class Motherboard6{
 
       void load(){
         SerializableConfig conf = {
+          deviceName: {},
           midiChannel: 0,
-          {}
+          {},
         };
-        
+
         EEPROM.get( 0, conf);
         delay(10);
         
+        // If the current device name is different than what's in memory,
+        // erase the memory
+        if (strcmp(this->deviceName, conf.deviceName) != 0){
+          Serial.println("Device name does not match : Erasing memory");
+          for (int i = 0 ; i < EEPROM.length() ; i++) {
+            EEPROM.write(i, 0);
+          }
+          this->save();
+        }
+
         this->midiChannel = conf.midiChannel;
 
         this->midiControls.clear();
@@ -187,7 +203,7 @@ class Motherboard6{
     elapsedMicros clockMain;
     const unsigned int intervalClockMain = 5000;
     // Leds clocks
-    const unsigned int intervalDisplay = 10;
+    const unsigned int intervalDisplay = 1000;
     elapsedMicros clockDisplay;
     const unsigned int intervalDisplayFlash = 400;
     elapsedMillis clockDisplayFlash;
@@ -354,7 +370,7 @@ inline Motherboard6 *Motherboard6::getInstance() {
  * Init
  */
 inline void Motherboard6::init(String deviceName, std::initializer_list<InputType> inputs) {
-
+  
   // Init of the inputs
   byte i = 0;
   for(auto input : inputs){
@@ -363,7 +379,7 @@ inline void Motherboard6::init(String deviceName, std::initializer_list<InputTyp
   }
 
   // Config init
-  this->config.deviceName = deviceName;
+  strcpy(this->config.deviceName, deviceName.c_str());
   this->config.load();
   
   // Main multiplexer
@@ -449,7 +465,6 @@ inline void Motherboard6::update(){
   MIDI.read();
   usbMIDI.read();
 }
-
 
 /**
  * Main multiplexer on LEDs
@@ -1119,6 +1134,8 @@ inline void Motherboard6::writeLED(byte index){
  */
 inline void Motherboard6::setHandleMidiNoteOn(MidiNoteOnCallback fptr){
   this->midiNoteOnCallback = fptr;
+  MIDI.setHandleNoteOn(fptr);
+  usbMIDI.setHandleNoteOn(fptr);
 }
 
 /**
@@ -1126,6 +1143,8 @@ inline void Motherboard6::setHandleMidiNoteOn(MidiNoteOnCallback fptr){
  */
 inline void Motherboard6::setHandleMidiNoteOff(MidiNoteOffCallback fptr){
   this->midiNoteOffCallback = fptr;
+  MIDI.setHandleNoteOff(fptr);
+  usbMIDI.setHandleNoteOff(fptr);
 }
 
 /**
