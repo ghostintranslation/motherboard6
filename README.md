@@ -2,6 +2,8 @@
 
 ![GitHub version](https://img.shields.io/github/v/release/ghostintranslation/motherboard6.svg?include_prereleases)
 
+## ❗️ This is now deprecated in favor of https://github.com/ghostintranslation/motherboard
+
 MOTHERBOARD6 is a 6 controls Teensy 4.0 + audio board platform.
 
 MOTHERBOARD6, MOTHERBOARD9 and MOTHERBOARD12 allows for any combination of pushbuttons, potentiometers and encoders, in addition to leds. The footprints of those 3 type of components are stacked together so that only one pcb can be used for many different modules.
