@@ -2,6 +2,8 @@
 
 ![GitHub version](https://img.shields.io/github/v/release/ghostintranslation/motherboard6.svg?include_prereleases)
 
+## ❗️ This is now deprecated in favor of https://github.com/ghostintranslation/motherboard
+
 ## MOdular Teensy Hybrid Eurorack Board
 
 MOTHERBOARD6 is a 6 controls Teensy 4.0 + audio board platform. It is part of a familly of 3 variations of the same platform, MOTHERBOARD6, MOTHERBOARD9 and MOTHERBOARD12.
